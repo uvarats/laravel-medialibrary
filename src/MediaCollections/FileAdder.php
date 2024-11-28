@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use Spatie\MediaLibrary\Conversions\ImageGenerators\Image as ImageGenerator;
 use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\DiskCannotBeAccessed;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\DiskDoesNotExist;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileDoesNotExist;
@@ -427,10 +428,16 @@ class FileAdder
         if (! $this->subject->exists) {
             $this->subject->prepareToAttachMedia($media, $this);
 
+            /** @var class-string<Model> $class */
             $class = $this->subject::class;
 
-            $class::created(function ($model) {
+            $class::created(function (Model&HasMedia $model) {
+                /** @var Model&HasMedia&InteractsWithMedia $model */
                 $model->processUnattachedMedia(function (Media $media, self $fileAdder) use ($model) {
+                    if ($this !== $fileAdder) {
+                        return;
+                    }
+
                     $this->processMediaItem($model, $media, $fileAdder);
                 });
             });
